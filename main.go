@@ -36,7 +36,12 @@ func (r *Repository) CreateBook(c *fiber.Ctx) error {
 		return err
 	}
 
-	c.Status(http.StatusOK).JSON(&fiber.Map{"message": "Book has been added"})
+	if err := r.DB.Find(book).Error; err != nil {
+		c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{"message": "Book Already exists"})
+		return err
+	}
+
+	c.Status(http.StatusOK).JSON(&fiber.Map{"message": "Book has been added", "data": book})
 	return nil
 }
 
@@ -85,9 +90,9 @@ func (r *Repository) GetBookByID(c *fiber.Ctx) error {
 }
 func (r *Repository) SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
-	api.Post("/books", r.CreateBook)
-	api.Delete("/books/:id", r.DeleteBook)
-	api.Get("/books/:id", r.GetBookByID)
+	api.Post("/create_books", r.CreateBook)
+	api.Delete("delete_book/:id", r.DeleteBook)
+	api.Get("/get_books/:id", r.GetBookByID)
 	api.Get("/books", r.GetBooks)
 }
 
