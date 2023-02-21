@@ -50,6 +50,22 @@ func (r *Repository) GetBooks(c *fiber.Ctx) error {
 	return nil
 }
 
+func (r *Repository) DeleteBook(c *fiber.Ctx) error {
+	bookModels := &[]models.Books{}
+	id := c.Params("id")
+
+	if id == "" {
+		c.Status(http.StatusUnprocessableEntity).JSON(&fiber.Map{"message": "Id Cannot be empty"})
+		return nil
+	}
+	if err := r.DB.Delete(bookModels, id); err.Error != nil {
+		c.Status(http.StatusBadRequest).JSON(&fiber.Map{"message": "Could not delete book"})
+		return err.Error
+	}
+	c.Status(http.StatusOK).JSON(&fiber.Map{"message": "Books Deleted Successfully"})
+	return nil
+}
+
 func (r *Repository) SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
 	api.Post("/books", r.CreateBook)
