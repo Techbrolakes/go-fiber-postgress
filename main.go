@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -55,7 +56,7 @@ func (r *Repository) DeleteBook(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	if id == "" {
-		c.Status(http.StatusUnprocessableEntity).JSON(&fiber.Map{"message": "Id Cannot be empty"})
+		c.Status(http.StatusInternalServerError).JSON(&fiber.Map{"message": "Id Cannot be empty"})
 		return nil
 	}
 	if err := r.DB.Delete(bookModels, id); err.Error != nil {
@@ -66,6 +67,22 @@ func (r *Repository) DeleteBook(c *fiber.Ctx) error {
 	return nil
 }
 
+func (r *Repository) GetBookByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+	bookModels := &[]models.Books{}
+	if id == "" {
+		c.Status(http.StatusInternalServerError).JSON(&fiber.Map{"message": "Id Cannot be empty"})
+		return nil
+	}
+
+	fmt.Println("The Id is", id)
+	if err := r.DB.Where("id = ?", id).First(bookModels).Error; err != nil {
+		c.Status(http.StatusBadRequest).JSON(&fiber.Map{"message": "Could not get the book"})
+		return err
+	}
+	c.Status(http.StatusOK).JSON(&fiber.Map{"message": "Book Id Fetched Successfully", "data": bookModels})
+	return nil
+}
 func (r *Repository) SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
 	api.Post("/books", r.CreateBook)
@@ -93,8 +110,12 @@ func main() {
 		log.Fatal("Could not establish a database connection")
 	}
 
-	r := &Repository{DB: db}
+	err = models.MigrateBooks(db)
+	if err != nil {
+		log.Fatal("Could not migrate DB")
+	}
 
+	r := &Repository{DB: db}
 	app := fiber.New()
 	r.SetupRoutes(app)
 
